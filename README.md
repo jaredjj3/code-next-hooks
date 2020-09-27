@@ -8,4 +8,8 @@ In this lesson, engineers will
 
 - Learn what hooks are.
 - Discover commonly used hooks.
-- Learn how to make custom hooks.
+- Know how to make custom hooks.
+
+## References
+
+[React docs](https://reactjs.org/docs/hooks-intro.html)
