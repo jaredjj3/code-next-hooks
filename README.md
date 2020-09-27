@@ -71,7 +71,7 @@ const Counter = () => {
   useEffect(() => {
    document.title = `count: ${count}`;
    return () => { document.title = 'no counter' };
-  });
+  }, [count]);
 
   return (
     <div>
@@ -221,3 +221,164 @@ export const MouseTracker = () => {
 }
 ```
 
+### YOUR TURN: Renderer counter
+
+Have you wondered how many times a component is rerendering? Let's use `useEffect` in our MouseTracker component to answer this.
+
+Try this without looking at the solution: First, import `useEffect` from React, in a similar way that we import `useState`. Next, create state that will track the render count. Use `useEffect` in the component and set its dependencies to be `[x, y]`. In the `useEffect` callback, increment `renderCount` by 1.
+
+```jsx
+import React, { useState, useEffect } from 'react';
+
+const MOUSE_TRACKER_STYLE = {
+  border: '2px solid red', 
+  width: '500px', 
+  height: '500px'
+}
+
+export const MouseTracker = () => {
+  const [renderCount, setRenderCount] = useState(0);
+  const [x, setX] = useState(0);
+  const [y, setY] = useState(0);
+
+  const updateCoords = (e) => {
+    setX(e.pageX);
+    setY(e.pageY);
+  }
+
+  useEffect(() => {
+    setRenderCount(renderCount + 1);
+  }, [x, y]);
+
+  return (
+    <>
+      <div>render count: {renderCount}</div>
+      <br />
+      <div>(x, y): ({x}, {y})</div>
+      <br />
+      <div style={MOUSE_TRACKER_STYLE} onMouseMove={updateCoords} />
+    </>
+  );
+}
+```
+
+### Reflection
+
+- Why did we have to use `useEffect`?
+- What are `useEffect`'s dependency array and why do we need it?
+
+## LECTURE: Custom hooks
+
+In programming, there is something called the [DRY principle](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) (Don't Repeat Yourself). The idea is to abstract repetitious code into a single abstraction, so that it's easier to maintain and understand.
+
+For example, let's say I had this code:
+
+```js
+console.log(`IMPORTANT: something went wrong`.toUpperCase());
+console.log(`IMPORTANT: trying again`.toUpperCase());
+console.log(`IMPORTANT: debug info: ${someGlobalVariable}`.toUpperCase());
+```
+
+I'm prepending `'IMPORTANT: '` to each function call. Since I'm seeing this pattern a few times, I can adhere to the DRY principle like this:
+
+```js
+const important = (str) => `IMPORTANT: ${str}`.toUpperCase();
+console.log(important('something went wrong'));
+console.log(important('trying again'));
+console.log(important(`debug info ${someGlobalVariable}`));
+```
+
+Using the `important` function guarantees that I don't misspell `IMPORTANT: ` or forget to call `String.toUpperCase`.
+
+The same idea applies to React hooks and components.  When we see repeated code, we can create a single abstraction for it, instead.
+
+>Note: It is very important that you see something repeat 2 or 3 times before you create an abstraction for it. When you abstract an operation too early, you end up having to make assumptions about all future use cases, creating a [leaky abstraction](https://stackoverflow.com/questions/3883006/meaning-of-leaky-abstraction). When you wait for a code pattern to repeat, you have a better chance of understanding the usecases of the abstraction. This is one of the biggests challenges in Software engineering. It's an art that takes some time to getting used to.
+
+### EXAMPLE: Friend Status
+
+The following example was adapted from the [React docs](https://reactjs.org/docs/hooks-custom.html).
+
+Let's say we have a chat application. We want to show our user which friends are online. We have a FriendListItem component, which is rendered for every friend.
+
+```jsx
+import React, { useState, useEffect } from 'react';
+
+const FriendListItem = (props) => {
+  const [isOnline, setIsOnline] = useState(null);
+  useEffect(() => {
+    const handleStatusChange = (status) => {
+      setIsOnline(status.isOnline);
+    }
+    ChatAPI.subscribeToFriendStatus(props.friend.id, handleStatusChange);
+    return () => {
+      ChatAPI.unsubscribeFromFriendStatus(props.friend.id, handleStatusChange);
+    };
+  });
+
+  return (
+    <li style={{ color: isOnline ? 'green' : 'black' }}>
+      {props.friend.name}
+    </li>
+  );
+}
+```
+
+This works, but we're told that we need to surface the online status to 2 more different components. The implementation looks almost identical. This warrants to a custom hook:
+
+```jsx
+import { useState, useEffect } from 'react';
+
+const useFriendStatus = (friendID) => {
+  const [isOnline, setIsOnline] = useState(null);
+
+  useEffect(() => {
+    const handleStatusChange = (status) => {
+      setIsOnline(status.isOnline);
+    }
+
+    ChatAPI.subscribeToFriendStatus(friendID, handleStatusChange);
+    return () => {
+      ChatAPI.unsubscribeFromFriendStatus(friendID, handleStatusChange);
+    };
+  }, [friendID]);
+
+  return isOnline;
+}
+```
+
+Now, we can simplify our FriendListItem component as well as use our new custom hook in the 2 different components its needed in.
+
+```jsx
+import React, { useState, useEffect } from 'react';
+
+const FriendListItem = (props) => {
+  const isOnline = useFriendStatus(props.friend.id);
+
+  return (
+    <li style={{ color: isOnline ? 'green' : 'black' }}>
+      {props.friend.name}
+    </li>
+  );
+}
+```
+
+>Note: Even though we won't cover testing in this club, it is worth noting that creating a custom hook allows the hook behavior to be tested easier. We don't need to know anything about what components it's used in. In our automated test, we would just create a simple dummy component, and test against that.
+
+A contrived example:
+
+```jsx
+const Dummy = (props) => {
+  const isOnline = useFriendStatus(props.friendID);
+  if (isOnline) {
+    return <div data-testid="is-online"></div>;
+  else {
+    return <div data-testid="is-offline"></div>;
+  }
+};
+
+test('useFriendStatus inits as offline', () => {
+  const { queryByTestId } = render(<Dummy friend={{ id: 'fj832jf' }} />);
+  expect(queryByTestId('is-offline')).toBeInTheDocument();
+  expect(queryByTestId('is-online')).not.toBeInTheDocument();
+});
+```
