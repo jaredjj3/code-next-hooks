@@ -382,3 +382,54 @@ test('useFriendStatus inits as offline', () => {
   expect(queryByTestId('is-online')).not.toBeInTheDocument();
 });
 ```
+
+### YOUR TURN: Custom Counter Hook
+
+We really like counting things in this club. We've implemented many Counter components and we really should just create a hook for it.
+
+Try to do this without looking. Create a new hook called `useCounter`. It should return an array of `[count, increment, decrement]`.
+
+BONUS: Allow the caller to specify how much to increment or decrement by.
+
+Solution with bonus:
+
+```jsx
+const useCounter = (delta = 1) => {
+  const [count, setCount] = useState(0)
+
+  const increment = () => setCount(count + delta);
+  const decrement = () => setCount(count - delta);
+
+  return [count, increment, decrement];
+};
+
+const FivesCounter = () => {
+  const [count, incrementBy5, decrementBy5] = useCounter(5);
+  return (
+    <>
+      <div>count: {count}</div>
+      <div>
+        <button onClick={incrementBy5}>+5</button>
+        <button onClick={decrementBy5}>-5</button>
+      </div>
+    </>
+  );
+};
+
+// or even more generic
+
+const DeltaCounter = (props) => {
+  const [count, increment, decrement] = useCounter(props.delta);
+  return (
+    <>
+      <div>count: {count}</div>
+      <div>
+        <button onClick={increment}>+{delta}</button>
+        <button onClick={decrement}>-{delta}</button>
+      </div>
+    </>
+  );
+};
+
+// requires the delta prop: <DeltaCounter delta={10} />
+```
