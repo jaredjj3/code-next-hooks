@@ -1,7 +1,7 @@
 import React from 'react';
 import { useCounter } from './hooks/useCounter';
 
-export const CustomHookCounter = () => {
+export const Counter = () => {
   const [count, increment, decrement] = useCounter(5);
   return (
     <div>
